@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  comfyui:
+    image: nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+    container_name: comfyui
+    restart: unless-stopped
+    runtime: nvidia
+    ports:
+      - "8188:8188"
+    volumes:
+      - ./app:/ComfyUI
+      - ./inputs:/ComfyUI/input
+      - ./outputs:/ComfyUI/output
+      - ./models:/ComfyUI/models
+      - ./custom_nodes:/ComfyUI/custom_nodes
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+    command: >
+      bash -c "
+        apt-get update && 
+        apt-get install -y python3 python3-pip git &&
+        if [ ! -d '/ComfyUI/.git' ]; then
+          git clone https://github.com/comfyanonymous/ComfyUI.git /ComfyUI_tmp &&
+          cp -r /ComfyUI_tmp/. /ComfyUI/ &&
+          rm -rf /ComfyUI_tmp
+        fi &&
+        cd /ComfyUI &&
+        pip3 install -r requirements.txt &&
+        pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 &&
+        python3 main.py --listen 0.0.0.0 --port 8188 --cuda-device=0
+      "
